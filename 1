@@ -1,0 +1,25 @@
+sudo cat /var/spool/cron/root
+SHELL=/bin/sh
+MAILTO=4u@abonent-it.ru
+PATH=/bin:/usr/bin:/sbin:/home/backuper
+01 00 * * 6 /home/backuper/backuper.sh >> /home/backuper/logger.log 2>&1
+59 8 * * 6 [ `find /home/backup -name "*.gz" -mtime -1 | wc -l` -eq 1 ] && echo -e "FAIL BACKUP ON HOST-2.\nSubj. Number of last backup files not equivals then 2!" | mail -r host2@gw.santel.spb.ru -s "SANTEL. BACKUP ERROR ON HOST-2! " 4u@abonent-it.ru
+
+
+ sudo cat /home/backuper/backuper.sh
+#!/bin/bash
+#timeStamp=`/bin/date +%Y%m%d-%H%M%S`
+/bin/cd /home/backuper
+/bin/df -h
+/bin/find /home/backup/ -name *.gz -atime +10 -delete
+for lvName in \
+sql2008-diskc \
+; \
+do timeStamp=`date +%Y%m%d-%H%M%S` && lvSize=`sudo lvs | grep $lvName | awk '{print $4}'` ; \
+sudo lvcreate -s -n ${lvName}.${timeStamp} -L25G vgbcache/${lvName} ; \
+sudo dd if=/dev/vgbcache/${lvName} bs=1M | pv | pigz -ck --best -p32 >/home/backup/${lvName}.${timeStamp}.lvm_${lvSize}.dd.img.gz ; \
+sudo lvremove -f vgbcache/${lvName}.${timeStamp} ; \
+# echo timeStamp=${timeStamp} ; \
+# echo lvName=${lvName} ; \
+# echo lvSize=${lvSize} ; \
+done
